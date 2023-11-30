@@ -121,6 +121,7 @@ GetOptions("h|help!" => \$In::Opt{"Help"},
   "skip-deprecated!" => \$In::Opt{"SkipDeprecated"},
   "skip-classes=s" => \$In::Opt{"SkipClassesList"},
   "skip-packages=s" => \$In::Opt{"SkipPackagesList"},
+  "skip-methods=s" => \$In::Opt{"SkipMethodsList"},
   "non-impl=s" => \$In::Opt{"NonImplClassesList"},
   "non-impl-all!" => \$In::Opt{"NonImplAll"},
   "short" => \$In::Opt{"ShortMode"},
@@ -341,6 +342,9 @@ EXTRA OPTIONS:
   
   -skip-packages PATH
       List of packages that should not be checked.
+
+  -skip-methodes PATH
+      List of method signatures that should not be checked.
   
   -non-impl PATH
       List of interfaces that should not be implemented by users.
@@ -5154,6 +5158,17 @@ sub scenario()
         {
             $In::Desc{1}{"SkipPackages"}{$Package} = 1;
             $In::Desc{2}{"SkipPackages"}{$Package} = 1;
+        }
+    }
+    if(my $SkipMethodsList = $In::Opt{"SkipMethodsList"})
+    {
+        if(not -f $SkipMethodsList) {
+            exitStatus("Access_Error", "can't access file \'$SkipMethodsList\'");
+        }
+        foreach my $Method (split(/\n/, readFile($SkipMethodsList)))
+        {
+            $In::Desc{1}{"SkipMethods"}{$Method} = 1;
+            $In::Desc{2}{"SkipMethods"}{$Method} = 1;
         }
     }
     if(my $ClientPath = $In::Opt{"ClientPath"})

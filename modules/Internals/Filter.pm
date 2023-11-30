@@ -157,6 +157,11 @@ sub methodFilter($$)
             return 0;
         }
     }
+
+    if(skipMethod($Method, $LVer))
+    { # skip methods
+        return 0;
+    }
     
     if(skipPackage($Package, $LVer))
     { # internal packages
@@ -312,6 +317,24 @@ sub skipPackage($$)
         }
     }
     
+    return 0;
+}
+
+sub skipMethod($$)
+{
+    my ($Method, $LVer) = @_;
+
+    if(defined $In::Desc{$LVer}{"SkipMethods"})
+    {
+        foreach my $M (keys(%{$In::Desc{$LVer}{"SkipMethods"}}))
+        {
+            if($Method eq $M)
+            { # user skipped methods
+                return 1;
+            }
+        }
+    }
+
     return 0;
 }
 
