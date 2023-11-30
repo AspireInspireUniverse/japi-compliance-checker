@@ -3017,6 +3017,110 @@ sub getAnchor($$$)
     }
 }
 
+sub getReportIgnored($)
+{
+    if($In::Opt{"ShortMode"}) {
+        return "";
+    }
+
+    my $Level = $_[0];
+    my ($IGNORED_METHODS, %MethodIgnoredInArchiveClass);
+    %LMap = ();
+
+    if(defined $In::Desc{1}{"SkipMethods"})
+    {
+        foreach my $M (keys(%{$In::Desc{1}{"SkipMethods"}}))
+        {
+            my $d = 1;
+            if(not defined($MethodInfo{$d}{$M})) {
+                $d = 2;
+            }
+            if(defined $MethodInfo{$d}{$M})
+            { # user skipped methods
+                my $ArchiveName = $MethodInfo{$d}{$M}{"Archive"};
+                my $ClassName = getShortName($MethodInfo{$d}{$M}{"Class"}, $d);
+                $MethodIgnoredInArchiveClass{$ArchiveName}{$ClassName}{$M} = 1;
+                $LMap{$M} = $d;
+            }
+        }
+    }
+
+    my $Ignored_Number = 0;
+    foreach my $ArchiveName (sort {lc($a) cmp lc($b)} keys(%MethodIgnoredInArchiveClass))
+    {
+        foreach my $ClassName (sort {lc($a) cmp lc($b)} keys(%{$MethodIgnoredInArchiveClass{$ArchiveName}}))
+        {
+            my %NameSpace_Method = ();
+            foreach my $Method (keys(%{$MethodIgnoredInArchiveClass{$ArchiveName}{$ClassName}})) {
+                $NameSpace_Method{$MethodInfo{$LMap{$Method}}{$Method}{"Package"}}{$Method} = 1;
+            }
+
+            my $ShowClass = $ClassName;
+            $ShowClass=~s/<.*>//g;
+
+            foreach my $NameSpace (sort keys(%NameSpace_Method))
+            {
+                $IGNORED_METHODS .= "<span class='jar'>$ArchiveName</span>, <span class='cname'>".specChars($ShowClass).".class</span><br/>\n";
+
+                if($NameSpace) {
+                    $IGNORED_METHODS .= "<span class='pkg_t'>package</span> <span class='pkg'>$NameSpace</span><br/>\n";
+                }
+
+                if($In::Opt{"Compact"}) {
+                    $IGNORED_METHODS .= "<div class='symbols'>";
+                }
+                my @SortedMethods = sort {lc($MethodInfo{$LMap{$a}}{$a}{"Signature"}) cmp lc($MethodInfo{$LMap{$b}}{$b}{"Signature"})} sort keys(%{$NameSpace_Method{$NameSpace}});
+                foreach my $Method (@SortedMethods)
+                {
+                    $Ignored_Number += 1;
+
+                    my $Signature = undef;
+
+                    if($In::Opt{"Compact"}) {
+                        $Signature = getSignature($Method, $LMap{$Method}, "Full|HTML|Simple");
+                    }
+                    else {
+                        $Signature = highLight_ItalicColor($Method, $LMap{$Method});
+                    }
+
+                    if($NameSpace) {
+                        $Signature=~s/(\W|\A)\Q$NameSpace\E\.(\w)/$1$2/g;
+                    }
+
+                    if($In::Opt{"Compact"}) {
+                        $IGNORED_METHODS .= "&nbsp;".$Signature."<br/>\n";
+                    }
+                    else {
+                        $IGNORED_METHODS .= insertIDs($ContentSpanStart.$Signature.$ContentSpanEnd."<br/>\n".$ContentDivStart."<span class='mngl'>".specChars($Method)."</span><br/><br/>".$ContentDivEnd."\n");
+                    }
+                }
+
+                if($In::Opt{"Compact"}) {
+                    $IGNORED_METHODS .= "</div>";
+                }
+
+                $IGNORED_METHODS .= "<br/>\n";
+            }
+
+        }
+    }
+    if($IGNORED_METHODS)
+    {
+        my $Anchor = "<a name='Ignored'></a>";
+        if($In::Opt{"JoinReport"}) {
+            $Anchor = "<a name='".$Level."_Ignored'></a>";
+        }
+        if($In::Opt{"OldStyle"}) {
+            $IGNORED_METHODS = "<h2>Ignored Methods ($Ignored_Number)</h2><hr/>\n".$Ignored_METHODS;
+        }
+        else {
+            $IGNORED_METHODS = "<h2>Ignored Methods <span".getStyle("M", "Ignored", $Ignored_Number).">&nbsp;$Ignored_Number&nbsp;</span></h2><hr/>\n".$IGNORED_METHODS;
+        }
+        $IGNORED_METHODS = $Anchor.$IGNORED_METHODS.$TOP_REF."<br/>\n";
+    }
+    return $IGNORED_METHODS;
+}
+
 sub getReportAdded($)
 {
     if($In::Opt{"ShortMode"}) {
@@ -3966,9 +4070,9 @@ sub getReport($)
         $Report .= "<a id='SourceID' href='#SourceTab' style='margin-left:3px' class='tab disabled'>Source<br/>Compatibility</a>\n";
         $Report .= "</div>\n";
         
-        $Report .= "<div id='BinaryTab' class='tab'>\n$BSummary\n".getReportAdded("Binary").getReportRemoved("Binary").getReportProblems("High", "Binary").getReportProblems("Medium", "Binary").getReportProblems("Low", "Binary").getReportProblems("Safe", "Binary").getSourceInfo()."<br/><br/><br/></div>";
+        $Report .= "<div id='BinaryTab' class='tab'>\n$BSummary\n".getReportAdded("Binary").getReportRemoved("Binary").getReportIgnored("Binary").getReportProblems("High", "Binary").getReportProblems("Medium", "Binary").getReportProblems("Low", "Binary").getReportProblems("Safe", "Binary").getSourceInfo()."<br/><br/><br/></div>";
         
-        $Report .= "<div id='SourceTab' class='tab'>\n$SSummary\n".getReportAdded("Source").getReportRemoved("Source").getReportProblems("High", "Source").getReportProblems("Medium", "Source").getReportProblems("Low", "Source").getReportProblems("Safe", "Source").getSourceInfo()."<br/><br/><br/></div>";
+        $Report .= "<div id='SourceTab' class='tab'>\n$SSummary\n".getReportAdded("Source").getReportRemoved("Source").getReportIgnored("Source").getReportProblems("High", "Source").getReportProblems("Medium", "Source").getReportProblems("Low", "Source").getReportProblems("Safe", "Source").getSourceInfo()."<br/><br/><br/></div>";
         
         $Report .= getReportFooter();
         $Report .= "\n</body></html>";
@@ -3984,7 +4088,7 @@ sub getReport($)
         
         my $Report = "<!-\- $MetaData -\->\n".composeHTML_Head($Level, $Title, $Keywords, $Description, $CssStyles, $JScripts, $AnyChanged)."<body><a name='Top'></a>";
         $Report .= getReportHeader($Level)."\n".$Summary."\n";
-        $Report .= getReportAdded($Level).getReportRemoved($Level);
+        $Report .= getReportAdded($Level).getReportRemoved($Level).getReportIgnored($Level);
         $Report .= getReportProblems("High", $Level).getReportProblems("Medium", $Level).getReportProblems("Low", $Level).getReportProblems("Safe", $Level);
         $Report .= getSourceInfo()."<br/><br/><br/>\n";
         $Report .= getReportFooter();
