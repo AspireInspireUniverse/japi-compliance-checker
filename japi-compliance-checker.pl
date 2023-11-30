@@ -580,6 +580,7 @@ my @RecurTypes;
 #Problem descriptions
 my %CompatProblems;
 my %TotalAffected;
+my %IgnoredMethods = ();
 
 #Speedup
 my %TypeProblemsIndex;
@@ -3044,6 +3045,20 @@ sub getReportIgnored($)
             }
         }
     }
+    # TODO Calculate ignored methods from this, instead of above
+    # skipped this because of large number of ignored methods that 
+    # were ignored due to other options
+    # foreach my $M (keys(%IgnoredMethods))
+    # {
+    #     my $d = 1;
+    #     if(not defined($MethodInfo{$d}{$M})) {
+    #         $d = 2;
+    #     }
+    #     my $ArchiveName = $IgnoredMethods{$M}{"Archive"};
+    #     my $ClassName = getShortName($IgnoredMethods{$M}{"Class"}, $d);
+    #     $MethodIgnoredInArchiveClass{$ArchiveName}{$ClassName}{$M} = 1;
+    #     $LMap{$M} = $d;
+    # }
 
     my $Ignored_Number = 0;
     foreach my $ArchiveName (sort {lc($a) cmp lc($b)} keys(%MethodIgnoredInArchiveClass))
@@ -4223,6 +4238,7 @@ sub detectAdded()
         if(not defined $MethodInfo{1}{$Method})
         {
             if(not methodFilter($Method, 2)) {
+                $IgnoredMethods{$Method} = $MethodInfo{2}{$Method};
                 next;
             }
             
@@ -4301,6 +4317,7 @@ sub detectRemoved()
         if(not defined $MethodInfo{2}{$Method})
         {
             if(not methodFilter($Method, 1)) {
+                $IgnoredMethods{$Method} = $MethodInfo{1}{$Method};
                 next;
             }
             
